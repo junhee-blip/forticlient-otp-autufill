@@ -51,18 +51,25 @@ fi
 security add-generic-password -U -s "$KEYCHAIN_SERVICE" -a "$EMAIL" -w "$APP_PW"
 echo "✓ 키체인에 비밀번호 저장 완료"
 
-# ── 파일 복사 ─────────────────────────────────
-mkdir -p "$INSTALL_DIR/assets"
-cp "$SCRIPT_DIR/watcher.py" "$INSTALL_DIR/"
-cp "$SCRIPT_DIR/run.sh" "$INSTALL_DIR/"
-cp "$SCRIPT_DIR/assets/icon.png" "$INSTALL_DIR/assets/"
-[ -f "$SCRIPT_DIR/assets/icon.icns" ] && cp "$SCRIPT_DIR/assets/icon.icns" "$INSTALL_DIR/assets/"
-chmod +x "$INSTALL_DIR/run.sh" "$INSTALL_DIR/watcher.py"
+# ── 파일 복사 (같은 디렉토리에서 실행하면 스킵) ──
+if [ "$SCRIPT_DIR" != "$INSTALL_DIR" ]; then
+  mkdir -p "$INSTALL_DIR/assets"
+  cp -f "$SCRIPT_DIR/watcher.py" "$INSTALL_DIR/"
+  cp -f "$SCRIPT_DIR/run.sh" "$INSTALL_DIR/"
+  cp -f "$SCRIPT_DIR/assets/icon.png" "$INSTALL_DIR/assets/"
+  [ -f "$SCRIPT_DIR/assets/icon.icns" ] && cp -f "$SCRIPT_DIR/assets/icon.icns" "$INSTALL_DIR/assets/"
+  if [ -d "$SCRIPT_DIR/FortiClientOTP.app" ]; then
+    rm -rf "$INSTALL_DIR/FortiClientOTP.app"
+    cp -R "$SCRIPT_DIR/FortiClientOTP.app" "$INSTALL_DIR/"
+  fi
+  echo "✓ 파일 복사: $INSTALL_DIR"
+else
+  echo "✓ 이미 설치 위치에서 실행됨 (복사 스킵)"
+fi
+chmod +x "$INSTALL_DIR/run.sh" "$INSTALL_DIR/watcher.py" 2>/dev/null || true
 
-# ── 알림 앱 복사 ──────────────────────────────
-if [ -d "$SCRIPT_DIR/FortiClientOTP.app" ]; then
-  rm -rf "$INSTALL_DIR/FortiClientOTP.app"
-  cp -R "$SCRIPT_DIR/FortiClientOTP.app" "$INSTALL_DIR/"
+# ── 알림 앱 Launch Services 등록 ──────────────
+if [ -d "$INSTALL_DIR/FortiClientOTP.app" ]; then
   touch "$INSTALL_DIR/FortiClientOTP.app"
   /System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/LaunchServices.framework/Versions/A/Support/lsregister -f "$INSTALL_DIR/FortiClientOTP.app" >/dev/null 2>&1 || true
   echo "✓ 알림 앱 등록 완료"
