@@ -47,6 +47,38 @@ if [ ${#APP_PW} -lt 12 ]; then
   exit 1
 fi
 
+# ── IMAP 연결 테스트 ──────────────────────────
+echo ""
+echo "IMAP 연결 테스트 중..."
+TEST_OUT=$(/usr/bin/python3 -c '
+import imaplib, sys
+email_addr = sys.argv[1]
+pw = sys.stdin.read().strip()
+try:
+    M = imaplib.IMAP4_SSL("imap.gmail.com", 993, timeout=15)
+    M.login(email_addr, pw)
+    M.logout()
+    print("OK")
+except imaplib.IMAP4.error as e:
+    print(f"AUTH_FAIL: {e}", file=sys.stderr)
+    sys.exit(1)
+except Exception as e:
+    print(f"CONN_FAIL: {e}", file=sys.stderr)
+    sys.exit(2)
+' "$EMAIL" <<< "$APP_PW" 2>&1) || {
+  echo ""
+  echo "❌ 연결 실패"
+  echo "   $TEST_OUT"
+  echo ""
+  echo "확인 사항:"
+  echo "  1) Gmail 주소가 정확한가요? ($EMAIL)"
+  echo "  2) 앱 비밀번호는 https://myaccount.google.com/apppasswords 에서 발급한 16자리인가요?"
+  echo "  3) Google 계정 2단계 인증이 켜져 있나요?"
+  echo "  4) 회사 IT가 IMAP을 막아놓진 않았나요?"
+  exit 1
+}
+echo "✓ IMAP 연결 OK"
+
 # ── 키체인 저장 ───────────────────────────────
 security add-generic-password -U -s "$KEYCHAIN_SERVICE" -a "$EMAIL" -w "$APP_PW"
 echo "✓ 키체인에 비밀번호 저장 완료"
